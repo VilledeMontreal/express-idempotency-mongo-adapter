@@ -2,7 +2,10 @@
 // Licensed under the MIT license.
 // See LICENSE file in the project root for full license information.
 
-import { IdempotencyResource, IIdempotencyDataAdapter } from '@villemontreal/express-idempotency';
+import {
+    IdempotencyResource,
+    IIdempotencyDataAdapter,
+} from '@villemontreal/express-idempotency';
 import { boundClass } from 'autobind-decorator';
 import { AdapterOptions } from './adapterOptions';
 import * as mongodb from 'mongodb';
@@ -21,13 +24,13 @@ const SCHEMA_VERSION: string = '1.0.0';
  * Used to keep more information on the resource.
  */
 interface MongoIdempotencyResource extends IdempotencyResource {
-  // Indicate the schema version used to describe the idempotency resource.
-  // Required to provide backward compatibility later.
-  schema_version: number;
+    // Indicate the schema version used to describe the idempotency resource.
+    // Required to provide backward compatibility later.
+    schema_version: number;
 
-  // The date and time the resource as been created. Used by the TTL mongo index
-  // to clear the collection.
-  createdAt: Date;
+    // The date and time the resource as been created. Used by the TTL mongo index
+    // to clear the collection.
+    createdAt: Date;
 }
 
 /**
@@ -35,16 +38,16 @@ interface MongoIdempotencyResource extends IdempotencyResource {
  * @param options Provided options
  */
 export function newAdapter(options: AdapterOptions) {
-  const adapter = new MongoAdapter(options);
-  adapter
-    .init()
-    .then(() => {
-      console.log('Mongo Adapter has been initialized');
-    })
-    .catch((err) => {
-      throw err;
-    }); // Launch initialiation
-  return adapter;
+    const adapter = new MongoAdapter(options);
+    adapter
+        .init()
+        .then(() => {
+            console.log('Mongo Adapter has been initialized');
+        })
+        .catch((err) => {
+            throw err;
+        }); // Launch initialiation
+    return adapter;
 }
 
 /**
@@ -53,193 +56,209 @@ export function newAdapter(options: AdapterOptions) {
  */
 @boundClass
 export class MongoAdapter implements IIdempotencyDataAdapter {
-  // Options used to configure the mongo adapter
-  private _options: AdapterOptions;
+    // Options used to configure the mongo adapter
+    private _options: AdapterOptions;
 
-  // Indicate that the adapter as been initialize.
-  // This is to prevent the schema creation phase to repeat itself.
-  private _initialized: boolean = false;
+    // Indicate that the adapter as been initialize.
+    // This is to prevent the schema creation phase to repeat itself.
+    private _initialized: boolean = false;
 
-  // Database connection
-  private _db: mongodb.Db;
+    // Database connection
+    private _db: mongodb.Db;
 
-  /**
-   * Constructor, basically keep a copy of options passed as arguments.
-   * For optional properties that are not provided, use the default value.
-   * @param options Provided options
-   */
-  public constructor(options: AdapterOptions) {
-    this._options = {
-      config: options.config,
-      useDelegation: options.useDelegation,
-      delegate: options.delegate,
-      collectionPrefix: options.collectionPrefix ? options.collectionPrefix : COLLECTION_PREFIX,
-      ttl: options.ttl ? options.ttl : TTL,
-    };
-  }
-
-  /**
-   * Establish the connection with the database
-   * by initializing the mongo client.
-   */
-  private async connectToDatabase() {
-    this._initialized = true;
-
-    if (this._options.useDelegation) {
-      // Retrieve database connection from delegation
-      this._db = await this._options.delegate();
-    } else {
-      // Must establish connection itself
-      const mongoClient = await mongodb.connect(
-        this._options.config.uri,
-        this._options.config.settings
-      );
-      this._db = mongoClient.db();
+    /**
+     * Constructor, basically keep a copy of options passed as arguments.
+     * For optional properties that are not provided, use the default value.
+     * @param options Provided options
+     */
+    public constructor(options: AdapterOptions) {
+        this._options = {
+            config: options.config,
+            useDelegation: options.useDelegation,
+            delegate: options.delegate,
+            collectionPrefix: options.collectionPrefix
+                ? options.collectionPrefix
+                : COLLECTION_PREFIX,
+            ttl: options.ttl ? options.ttl : TTL,
+        };
     }
-  }
 
-  /**
-   * Mongo initialization of the adapter.
-   * It creates the collection and the appropriate indexes.
-   */
-  public async init() {
-    // Do the connection to the database
-    await this.connectToDatabase();
+    /**
+     * Establish the connection with the database
+     * by initializing the mongo client.
+     */
+    private async connectToDatabase() {
+        this._initialized = true;
 
-    // Setup store collection
-    const storeCollection = await this.getOrCreateCollection(this.getStoreCollectionName());
-    // Create the idempotency key index if it doesn't exist
-    storeCollection.createIndexes([
-      {
-        key: { idempotencyKey: 1 },
-        name: 'searchByKey',
-        unique: true,
-      },
-      {
-        key: { createdAt: 1 },
-        name: 'ttlKey',
-        expireAfterSeconds: this._options.ttl,
-      },
-    ]);
-
-    // Setup schema collection
-    const schemaCollection = await this.getOrCreateCollection(this.getSchemaCollectionName());
-
-    // Indicate that the adapter has been initialized
-    this._initialized = true;
-  }
-
-  /**
-   * Get a collection, or create it if it doesn't exists.
-   * @param collectionName The collection name to create
-   */
-  private async getOrCreateCollection(collectionName: string): Promise<mongodb.Collection<any>> {
-    let collection = null;
-    try {
-      collection = await this._db.collection(collectionName);
-    } catch (err) {
-      // if doesn't exist, create if
-      collection = await this._db.createCollection(collectionName);
+        if (this._options.useDelegation) {
+            // Retrieve database connection from delegation
+            this._db = await this._options.delegate();
+        } else {
+            // Must establish connection itself
+            const mongoClient = await mongodb.connect(
+                this._options.config.uri,
+                this._options.config.settings
+            );
+            this._db = mongoClient.db();
+        }
     }
-    return collection;
-  }
 
-  /**
-   * If not initialized, it will establish the connection to the database
-   * and do the setup.
-   */
-  private async checkForInitialization(): Promise<void> {
-    if (!this._initialized) {
-      throw new Error('Adapter has not been initialized.');
+    /**
+     * Mongo initialization of the adapter.
+     * It creates the collection and the appropriate indexes.
+     */
+    public async init() {
+        // Do the connection to the database
+        await this.connectToDatabase();
+
+        // Setup store collection
+        const storeCollection = await this.getOrCreateCollection(
+            this.getStoreCollectionName()
+        );
+        // Create the idempotency key index if it doesn't exist
+        storeCollection.createIndexes([
+            {
+                key: { idempotencyKey: 1 },
+                name: 'searchByKey',
+                unique: true,
+            },
+            {
+                key: { createdAt: 1 },
+                name: 'ttlKey',
+                expireAfterSeconds: this._options.ttl,
+            },
+        ]);
+
+        // Setup schema collection
+        const schemaCollection = await this.getOrCreateCollection(
+            this.getSchemaCollectionName()
+        );
+
+        // Indicate that the adapter has been initialized
+        this._initialized = true;
     }
-  }
 
-  /**
-   * Get the store collection name.
-   */
-  private getStoreCollectionName(): string {
-    return `${this._options.collectionPrefix}${COLLECTION_STORE_SUFFIX}`;
-  }
-
-  /**
-   * Get the schema collection name.
-   */
-  private getSchemaCollectionName(): string {
-    return `${this._options.collectionPrefix}${COLLECTION_SCHEMA_SUFFIX}`;
-  }
-
-  /**
-   * Find the resource for a specific idempotency key.
-   * @param idempotencyKey Idempotency key
-   * @returns Idempotency resource
-   */
-  public async findByIdempotencyKey(idempotencyKey: string): Promise<IdempotencyResource> {
-    await this.checkForInitialization();
-
-    // Check if we can find the idempotency key in the store.
-    const collection = this._db.collection(this.getStoreCollectionName());
-    const result: MongoIdempotencyResource = await collection.findOne({
-      idempotencyKey,
-    });
-
-    if (result) {
-      return this.cleanFromNull(result) as IdempotencyResource;
+    /**
+     * Get a collection, or create it if it doesn't exists.
+     * @param collectionName The collection name to create
+     */
+    private async getOrCreateCollection(
+        collectionName: string
+    ): Promise<mongodb.Collection<any>> {
+        let collection = null;
+        try {
+            collection = await this._db.collection(collectionName);
+        } catch (err) {
+            // if doesn't exist, create if
+            collection = await this._db.createCollection(collectionName);
+        }
+        return collection;
     }
-    return null;
-  }
 
-  /**
-   * Create a idempotency resource.
-   * @param idempotencyResource Idempotency resource
-   */
-  public async create(idempotencyResource: IdempotencyResource): Promise<void> {
-    await this.checkForInitialization();
+    /**
+     * If not initialized, it will establish the connection to the database
+     * and do the setup.
+     */
+    private async checkForInitialization(): Promise<void> {
+        if (!this._initialized) {
+            throw new Error('Adapter has not been initialized.');
+        }
+    }
 
-    const collection = this._db.collection(this.getStoreCollectionName());
-    await collection.insertOne({
-      ...idempotencyResource,
-      createdAt: new Date(),
-      schema_version: SCHEMA_VERSION,
-    });
-  }
+    /**
+     * Get the store collection name.
+     */
+    private getStoreCollectionName(): string {
+        return `${this._options.collectionPrefix}${COLLECTION_STORE_SUFFIX}`;
+    }
 
-  /**
-   * Update a idempotency resource.
-   * @param idempotencyResource Idempotency resource
-   */
-  public async update(idempotencyResource: IdempotencyResource): Promise<void> {
-    await this.checkForInitialization();
+    /**
+     * Get the schema collection name.
+     */
+    private getSchemaCollectionName(): string {
+        return `${this._options.collectionPrefix}${COLLECTION_SCHEMA_SUFFIX}`;
+    }
 
-    const newResource = {
-      ...idempotencyResource,
-      createdAt: new Date(),
-      schema_version: SCHEMA_VERSION,
-    };
-    const collection = this._db.collection(this.getStoreCollectionName());
-    await collection.replaceOne(
-      { idempotencyKey: idempotencyResource.idempotencyKey },
-      newResource
-    );
-  }
+    /**
+     * Find the resource for a specific idempotency key.
+     * @param idempotencyKey Idempotency key
+     * @returns Idempotency resource
+     */
+    public async findByIdempotencyKey(
+        idempotencyKey: string
+    ): Promise<IdempotencyResource> {
+        await this.checkForInitialization();
 
-  /**
-   * Delete a idempotency ressource.
-   * @param idempotencyKey Idempotency key associated to idempotency resource to remove
-   */
-  public async delete(idempotencyKey: string): Promise<void> {
-    await this.checkForInitialization();
-    const collection = this._db.collection(this.getStoreCollectionName());
-    await collection.deleteOne({ idempotencyKey });
-  }
+        // Check if we can find the idempotency key in the store.
+        const collection = this._db.collection(this.getStoreCollectionName());
+        const result: MongoIdempotencyResource = await collection.findOne({
+            idempotencyKey,
+        });
 
-  private cleanFromNull(objectToClean: any): any {
-    const removeEmpty = (obj: any) => {
-      Object.keys(obj).forEach((key) => {
-        if (obj[key] && typeof obj[key] === 'object') removeEmpty(obj[key]);
-        else if (obj[key] === undefined || obj[key] === null) delete obj[key];
-      });
-      return obj;
-    };
-    return removeEmpty(objectToClean);
-  }
+        if (result) {
+            return this.cleanFromNull(result) as IdempotencyResource;
+        }
+        return null;
+    }
+
+    /**
+     * Create a idempotency resource.
+     * @param idempotencyResource Idempotency resource
+     */
+    public async create(
+        idempotencyResource: IdempotencyResource
+    ): Promise<void> {
+        await this.checkForInitialization();
+
+        const collection = this._db.collection(this.getStoreCollectionName());
+        await collection.insertOne({
+            ...idempotencyResource,
+            createdAt: new Date(),
+            schema_version: SCHEMA_VERSION,
+        });
+    }
+
+    /**
+     * Update a idempotency resource.
+     * @param idempotencyResource Idempotency resource
+     */
+    public async update(
+        idempotencyResource: IdempotencyResource
+    ): Promise<void> {
+        await this.checkForInitialization();
+
+        const newResource = {
+            ...idempotencyResource,
+            createdAt: new Date(),
+            schema_version: SCHEMA_VERSION,
+        };
+        const collection = this._db.collection(this.getStoreCollectionName());
+        await collection.replaceOne(
+            { idempotencyKey: idempotencyResource.idempotencyKey },
+            newResource
+        );
+    }
+
+    /**
+     * Delete a idempotency ressource.
+     * @param idempotencyKey Idempotency key associated to idempotency resource to remove
+     */
+    public async delete(idempotencyKey: string): Promise<void> {
+        await this.checkForInitialization();
+        const collection = this._db.collection(this.getStoreCollectionName());
+        await collection.deleteOne({ idempotencyKey });
+    }
+
+    private cleanFromNull(objectToClean: any): any {
+        const removeEmpty = (obj: any) => {
+            Object.keys(obj).forEach((key) => {
+                if (obj[key] && typeof obj[key] === 'object')
+                    removeEmpty(obj[key]);
+                else if (obj[key] === undefined || obj[key] === null)
+                    delete obj[key];
+            });
+            return obj;
+        };
+        return removeEmpty(objectToClean);
+    }
 }
