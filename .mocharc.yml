@@ -1,9 +1,6 @@
-exit: true
-extension:
-  - ts
+# Mocha configuration
 recursive: true
 require:
-  - 'ts-node/register'
-  - 'source-map-support/register'
-spec:
-  - 'src/**/*.spec.ts'
+    - ts-node/register
+    - source-map-support/register
+spec: 'src/**/*.test.ts'
