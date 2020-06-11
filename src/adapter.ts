@@ -11,13 +11,13 @@ import { AdapterOptions } from './adapterOptions';
 import * as mongodb from 'mongodb';
 
 // Default values
-const COLLECTION_PREFIX: string = 'idempotency';
+const COLLECTION_PREFIX = 'idempotency';
 
 // Constantes
-const COLLECTION_SCHEMA_SUFFIX: string = 'Schema';
-const COLLECTION_STORE_SUFFIX: string = 'Store';
-const TTL: number = 86400;
-const SCHEMA_VERSION: string = '1.0.0';
+const COLLECTION_SCHEMA_SUFFIX = 'Schema';
+const COLLECTION_STORE_SUFFIX = 'Store';
+const TTL = 86400;
+const SCHEMA_VERSION = '1.0.0';
 
 /**
  * Specific idempotency resource for the mongo adapter.
@@ -37,7 +37,7 @@ interface MongoIdempotencyResource extends IdempotencyResource {
  * Function which instanciate a new mongo adapter.
  * @param options Provided options
  */
-export function newAdapter(options: AdapterOptions) {
+export function newAdapter(options: AdapterOptions): MongoAdapter {
     const adapter = new MongoAdapter(options);
     adapter
         .init()
@@ -61,7 +61,7 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
 
     // Indicate that the adapter as been initialize.
     // This is to prevent the schema creation phase to repeat itself.
-    private _initialized: boolean = false;
+    private _initialized = false;
 
     // Database connection
     private _db: mongodb.Db;
@@ -107,7 +107,7 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
      * Mongo initialization of the adapter.
      * It creates the collection and the appropriate indexes.
      */
-    public async init() {
+    public async init(): Promise<void> {
         // Do the connection to the database
         await this.connectToDatabase();
 
@@ -130,9 +130,7 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
         ]);
 
         // Setup schema collection
-        const schemaCollection = await this.getOrCreateCollection(
-            this.getSchemaCollectionName()
-        );
+        await this.getOrCreateCollection(this.getSchemaCollectionName());
 
         // Indicate that the adapter has been initialized
         this._initialized = true;
