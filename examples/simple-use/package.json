@@ -1,0 +1,17 @@
+{
+  "name": "@villemontreal/express-idempotency-mongo-adapter-example",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@villemontreal/express-idempotency": "1.0.0-pre.build.20200529.5",
+    "@villemontreal/express-idempotency-mongo-adapter": "1.0.0",
+    "express": "^4.17.1",
+    "mongodb": "3.5.7"
+  }
+}
