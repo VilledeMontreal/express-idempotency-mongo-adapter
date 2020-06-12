@@ -39,6 +39,7 @@
     "faker": "^4.1.0",
     "husky": "^4.2.5",
     "mocha": "7.1.2",
+    "mongodb-memory-server": "6.6.1",
     "nyc": "15.0.1",
     "prettier": "2.0.5",
     "sinon": "9.0.2",

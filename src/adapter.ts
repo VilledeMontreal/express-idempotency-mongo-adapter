@@ -84,6 +84,13 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
     }
 
     /**
+     * Indicate if the adapter is ready for use.
+     */
+    public isInitlialized(): boolean {
+        return this._initialized;
+    }
+
+    /**
      * Establish the connection with the database
      * by initializing the mongo client.
      */
@@ -158,7 +165,7 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
      * and do the setup.
      */
     private async checkForInitialization(): Promise<void> {
-        if (!this._initialized) {
+        if (!this.isInitlialized()) {
             throw new Error('Adapter has not been initialized.');
         }
     }
@@ -166,14 +173,14 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
     /**
      * Get the store collection name.
      */
-    private getStoreCollectionName(): string {
+    public getStoreCollectionName(): string {
         return `${this._options.collectionPrefix}${COLLECTION_STORE_SUFFIX}`;
     }
 
     /**
      * Get the schema collection name.
      */
-    private getSchemaCollectionName(): string {
+    public getSchemaCollectionName(): string {
         return `${this._options.collectionPrefix}${COLLECTION_SCHEMA_SUFFIX}`;
     }
 
@@ -194,7 +201,14 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
         });
 
         if (result) {
-            return this.cleanFromNull(result) as IdempotencyResource;
+            const idempotencyResource: IdempotencyResource = {
+                idempotencyKey: result.idempotencyKey,
+                request: result.request,
+            };
+            if (result.response) {
+                idempotencyResource.response = result.response;
+            }
+            return idempotencyResource;
         }
         return null;
     }
@@ -245,18 +259,5 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
         await this.checkForInitialization();
         const collection = this._db.collection(this.getStoreCollectionName());
         await collection.deleteOne({ idempotencyKey });
-    }
-
-    private cleanFromNull(objectToClean: any): any {
-        const removeEmpty = (obj: any) => {
-            Object.keys(obj).forEach((key) => {
-                if (obj[key] && typeof obj[key] === 'object')
-                    removeEmpty(obj[key]);
-                else if (obj[key] === undefined || obj[key] === null)
-                    delete obj[key];
-            });
-            return obj;
-        };
-        return removeEmpty(objectToClean);
     }
 }
