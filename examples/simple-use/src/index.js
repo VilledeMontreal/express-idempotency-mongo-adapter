@@ -4,8 +4,8 @@
 
 const express = require('express');
 const app = express();
-const idempotency = require('@villemontreal/express-idempotency');
-const MongoAdapter = require('@villemontreal/express-idempotency-mongo-adapter');
+const idempotency = require('express-idempotency');
+const MongoAdapter = require('express-idempotency-mongo-adapter');
 
 // New Mongo Adapter that will be used by the idempotency middleware
 const adapter = MongoAdapter.newAdapter({

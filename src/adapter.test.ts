@@ -7,7 +7,7 @@ import {
     IdempotencyResource,
     IdempotencyRequest,
     IdempotencyResponse,
-} from '@villemontreal/express-idempotency';
+} from 'express-idempotency';
 import * as mongodb from 'mongodb';
 
 describe('IIdempotencyDataAdapter tests', () => {

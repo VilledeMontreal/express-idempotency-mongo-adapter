@@ -5,7 +5,7 @@
 import {
     IdempotencyResource,
     IIdempotencyDataAdapter,
-} from '@villemontreal/express-idempotency';
+} from 'express-idempotency';
 import { boundClass } from 'autobind-decorator';
 import { AdapterOptions } from './adapterOptions';
 import * as mongodb from 'mongodb';
