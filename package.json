@@ -16,6 +16,12 @@
     "type": "git",
     "url": "git+https://github.com/VilledeMontreal/express-idempotency-mongo-adapter.git"
   },
+  "keywords": [
+    "express-idempotency",
+    "adapter",
+    "idempotent",
+    "idempotency"
+  ],
   "author": "Ville de Montréal",
   "license": "MIT",
   "homepage": "https://bitbucket.org/villemontreal/express-idempotency-mongo-adapter#readme",
