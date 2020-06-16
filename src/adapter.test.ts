@@ -65,6 +65,15 @@ describe('IIdempotencyDataAdapter tests', () => {
         const idempotencyResourceToFind: IdempotencyResource =
             idempotencyResources[index];
 
+        // Wierd behavior here. Just log to see what is going on...
+        if (idempotencyResourceToFind === undefined) {
+            console.log('-----------SOMETHING WRONG!------------');
+            console.log(idempotencyResourceToFind);
+            console.log(
+                `Index ${index}, Array length: ${idempotencyResources.length}`
+            );
+        }
+
         // Find the resource
         const idempotencyFound = await dataAdapter.findByIdempotencyKey(
             idempotencyResourceToFind.idempotencyKey
@@ -104,6 +113,15 @@ describe('IIdempotencyDataAdapter tests', () => {
         const idempotencyResourceToFind: IdempotencyResource =
             idempotencyResources[index];
 
+        // Wierd behavior here. Just log to see what is going on...
+        if (idempotencyResourceToFind === undefined) {
+            console.log('-----------SOMETHING WRONG!------------');
+            console.log(idempotencyResourceToFind);
+            console.log(
+                `Index ${index}, Array length: ${idempotencyResources.length}`
+            );
+        }
+
         // Find the resource
         const idempotencyFound = await dataAdapter.findByIdempotencyKey(
             idempotencyResourceToFind.idempotencyKey
@@ -136,6 +154,15 @@ describe('IIdempotencyDataAdapter tests', () => {
         });
         const idempotencyResourceToFind: IdempotencyResource =
             idempotencyResources[index];
+
+        // Wierd behavior here. Just log to see what is going on...
+        if (idempotencyResourceToFind === undefined) {
+            console.log('-----------SOMETHING WRONG!------------');
+            console.log(idempotencyResourceToFind);
+            console.log(
+                `Index ${index}, Array length: ${idempotencyResources.length}`
+            );
+        }
 
         // Find the resource
         let idempotencyFound = await dataAdapter.findByIdempotencyKey(
@@ -202,10 +229,11 @@ function createFakeIdempotencyResponse(): IdempotencyResponse {
 }
 
 function createFakeIdempotencyResource(): IdempotencyResource {
-    return {
+    const res: IdempotencyResource = {
         idempotencyKey: faker.random.uuid(),
         request: createFakeIdempotencyRequest(),
     };
+    return res;
 }
 
 function createArrayOfIndempotencyResource(

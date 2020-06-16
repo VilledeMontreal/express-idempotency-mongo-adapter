@@ -26,28 +26,11 @@ const SCHEMA_VERSION = '1.0.0';
 interface MongoIdempotencyResource extends IdempotencyResource {
     // Indicate the schema version used to describe the idempotency resource.
     // Required to provide backward compatibility later.
-    schema_version: number;
+    schemaVersion: number;
 
     // The date and time the resource as been created. Used by the TTL mongo index
     // to clear the collection.
     createdAt: Date;
-}
-
-/**
- * Function which instanciate a new mongo adapter.
- * @param options Provided options
- */
-export function newAdapter(options: AdapterOptions): MongoAdapter {
-    const adapter = new MongoAdapter(options);
-    adapter
-        .init()
-        .then(() => {
-            console.log('Mongo Adapter has been initialized');
-        })
-        .catch((err) => {
-            throw err;
-        }); // Launch initialiation
-    return adapter;
 }
 
 /**
@@ -94,7 +77,7 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
      * Establish the connection with the database
      * by initializing the mongo client.
      */
-    private async connectToDatabase() {
+    private async connectToDatabase(): Promise<void> {
         this._initialized = true;
 
         if (this._options.useDelegation) {
@@ -226,7 +209,7 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
         await collection.insertOne({
             ...idempotencyResource,
             createdAt: new Date(),
-            schema_version: SCHEMA_VERSION,
+            schemaVersion: SCHEMA_VERSION,
         });
     }
 
@@ -242,7 +225,7 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
         const newResource = {
             ...idempotencyResource,
             createdAt: new Date(),
-            schema_version: SCHEMA_VERSION,
+            schemaVersion: SCHEMA_VERSION,
         };
         const collection = this._db.collection(this.getStoreCollectionName());
         await collection.replaceOne(
@@ -260,4 +243,21 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
         const collection = this._db.collection(this.getStoreCollectionName());
         await collection.deleteOne({ idempotencyKey });
     }
+}
+
+/**
+ * Function which instanciate a new mongo adapter.
+ * @param options Provided options
+ */
+export function newAdapter(options: AdapterOptions): MongoAdapter {
+    const adapter = new MongoAdapter(options);
+    adapter
+        .init()
+        .then(() => {
+            // Do nothing
+        })
+        .catch((err) => {
+            throw err;
+        }); // Launch initialiation
+    return adapter;
 }
