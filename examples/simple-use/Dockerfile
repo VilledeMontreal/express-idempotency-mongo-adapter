@@ -10,7 +10,7 @@ COPY . .
 RUN npm install && npm run compile && npm prune --production && npm link
 
 # Installation of package to run the application
-RUN cd examples/simple-use && npm link "express-idempotency-mongo-adapter" && npm install
+RUN cd examples/simple-use && npm link "express-idempotency-mongo-adapter" && npm install --only=prod
 
 EXPOSE 8080
 
