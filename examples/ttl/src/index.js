@@ -16,13 +16,12 @@ const adapter = MongoAdapter.newAdapter({
 });
 
 // Add the idempotency middleware by specifying the use of the mongo adapter.
-app.use(
-  idempotency.idempotency({
-    dataAdapter: adapter,
-  })
-);
+const idempotencyMiddleware = idempotency.idempotency({
+  dataAdapter: adapter,
+});
 
-app.get('/', function (req, res) {
+// Could use app.use but showing another way to use middleware
+app.get('/', idempotencyMiddleware, function (req, res) {
   const idempotencyService = idempotency.getSharedIdempotencyService();
   if (idempotencyService.isHit(req)) {
     console.log('Idempotency middleware did already process the request!');
