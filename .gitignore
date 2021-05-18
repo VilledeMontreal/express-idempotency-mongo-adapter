@@ -22,3 +22,6 @@ temp
 
 # Test compilation
 .temp
+
+# npm
+package-lock.json
