@@ -131,7 +131,7 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
     /**
      * Used to stop the adapter by closing database connection.
      */
-    public async stop(): Promise<Boolean> {
+    public async stop(): Promise<boolean> {
         if (this._mongoClient) {
             try {
                 await this._mongoClient.close();
