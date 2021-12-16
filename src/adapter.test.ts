@@ -14,31 +14,22 @@ describe('IIdempotencyDataAdapter tests', () => {
     let mongod: MongoMemoryServer = null;
     let dataAdapter: MongoAdapter.MongoAdapter = null;
 
-    // Initialize Mongo memory server and the adapter
-    before(async () => {
-        mongod = await MongoMemoryServer.create();
+    before(function(done) {
+        // Set a timeout which will give enough time to download the mongo memory server binairy
+        // to be downloaded.
+        this.timeout(60000);
 
-        dataAdapter = MongoAdapter.newAdapter({
-            config: {
-                uri: mongod.getUri(),
-            },
-        });
+        MongoMemoryServer.create().then((value) => {
+            mongod = value;
 
-        return new Promise((resolve, reject) => {
-            let retry = 0;
-            const intervalId = setInterval(() => {
-                if (dataAdapter.isInitlialized()) {
-                    clearInterval(intervalId);
-                    resolve();
-                } else {
-                    if (retry < 3) {
-                        retry++;
-                    } else {
-                        clearInterval(intervalId);
-                        reject(new Error('Failed to initialize mongo adapter'));
-                    }
-                }
-            }, 10);
+            dataAdapter = MongoAdapter.newAdapter({
+                config: {
+                    uri: mongod.getUri(),
+                },
+            });
+
+            // Be sure that the schema has been initialized
+            setTimeout(done, 1000);
         });
     });
 
