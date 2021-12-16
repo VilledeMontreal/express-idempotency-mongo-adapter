@@ -14,7 +14,7 @@ describe('IIdempotencyDataAdapter tests', () => {
     let mongod: MongoMemoryServer = null;
     let dataAdapter: MongoAdapter.MongoAdapter = null;
 
-    before(function(done) {
+    before(function (done) {
         // Set a timeout which will give enough time to download the mongo memory server binairy
         // to be downloaded.
         this.timeout(60000);
