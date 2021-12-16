@@ -137,9 +137,6 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
                 await this._mongoClient.close();
                 return true;
             } catch (err) {
-                console.log(
-                    `Error while trying to close mongo client... ${err}`
-                );
                 return false;
             }
         }
