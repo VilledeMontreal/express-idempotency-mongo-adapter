@@ -8,7 +8,7 @@ import {
 } from 'express-idempotency';
 import { boundClass } from 'autobind-decorator';
 import { AdapterOptions } from './adapterOptions';
-import * as mongodb from 'mongodb';
+import { Collection, Db, MongoClient } from 'mongodb';
 
 // Default values
 const COLLECTION_PREFIX = 'idempotency';
@@ -47,7 +47,8 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
     private _initialized = false;
 
     // Database connection
-    private _db: mongodb.Db;
+    private _mongoClient: MongoClient;
+    private _db: Db;
 
     /**
      * Constructor, basically keep a copy of options passed as arguments.
@@ -85,11 +86,12 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
             this._db = await this._options.delegate();
         } else {
             // Must establish connection itself
-            const mongoClient = await mongodb.connect(
+            this._mongoClient = new MongoClient(
                 this._options.config.uri,
                 this._options.config.settings
             );
-            this._db = mongoClient.db();
+            await this._mongoClient.connect();
+            this._db = this._mongoClient.db();
         }
     }
 
@@ -127,12 +129,29 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
     }
 
     /**
+     * Used to stop the adapter by closing database connection.
+     */
+    public async stop(): Promise<Boolean> {
+        if (this._mongoClient) {
+            try {
+                await this._mongoClient.close();
+                return true;
+            } catch (err) {
+                console.log(
+                    `Error while trying to close mongo client... ${err}`
+                );
+                return false;
+            }
+        }
+    }
+
+    /**
      * Get a collection, or create it if it doesn't exists.
      * @param collectionName The collection name to create
      */
     private async getOrCreateCollection(
         collectionName: string
-    ): Promise<mongodb.Collection<any>> {
+    ): Promise<Collection<any>> {
         let collection = null;
         try {
             collection = await this._db.collection(collectionName);
@@ -174,11 +193,14 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
      */
     public async findByIdempotencyKey(
         idempotencyKey: string
-    ): Promise<IdempotencyResource> {
+    ): Promise<IdempotencyResource | null> {
         await this.checkForInitialization();
 
         // Check if we can find the idempotency key in the store.
-        const collection = this._db.collection(this.getStoreCollectionName());
+        const collection = this._db.collection<MongoIdempotencyResource>(
+            this.getStoreCollectionName()
+        );
+
         const result: MongoIdempotencyResource = await collection.findOne({
             idempotencyKey,
         });
