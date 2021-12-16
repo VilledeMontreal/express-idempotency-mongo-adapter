@@ -2,6 +2,11 @@
 
 All notable changes to this library will be documented in this file.
 
+## 1.0.3
+
+-   Use express-idempotency 1.0.5 typescript definition
+-   Update examples to use node 16
+
 ## 1.0.2
 
 -   Fix issue with autobind-decorator which must be a runtime dependency ([issue #7](https://github.com/VilledeMontreal/express-idempotency-mongo-adapter/issues/7))

@@ -8,7 +8,7 @@ import {
     IdempotencyRequest,
     IdempotencyResponse,
 } from 'express-idempotency';
-import * as mongodb from 'mongodb';
+import { Db, MongoClient } from 'mongodb';
 
 describe('IIdempotencyDataAdapter tests', () => {
     let mongod: MongoMemoryServer = null;
@@ -16,10 +16,11 @@ describe('IIdempotencyDataAdapter tests', () => {
 
     // Initialize Mongo memory server and the adapter
     before(async () => {
-        mongod = new MongoMemoryServer();
+        mongod = await MongoMemoryServer.create();
+
         dataAdapter = MongoAdapter.newAdapter({
             config: {
-                uri: await mongod.getUri(),
+                uri: mongod.getUri(),
             },
         });
 
@@ -43,6 +44,7 @@ describe('IIdempotencyDataAdapter tests', () => {
 
     // Clean Mongo memory server after use
     after(async () => {
+        await dataAdapter.stop();
         await mongod.stop();
     });
 
@@ -168,18 +170,23 @@ describe('IIdempotencyDataAdapter tests', () => {
     });
 
     it('allows database connection delegation', async () => {
-        const mongoClient = await mongodb.connect(await mongod.getUri());
+        const mongoClient = await new MongoClient(
+            await mongod.getUri()
+        ).connect();
         const newDataAdapter = new MongoAdapter.MongoAdapter({
             useDelegation: true,
-            delegate: async (): Promise<mongodb.Db> => {
+            delegate: async (): Promise<Db> => {
                 return mongoClient.db();
             },
         });
         await newDataAdapter.init();
         try {
             await newDataAdapter.create(createFakeIdempotencyResource());
+            await mongoClient.close();
         } catch (err) {
-            assert.fail(err.message);
+            assert.fail(
+                `Error while creating fake idempotency resource : ${err}`
+            );
         }
     });
 });
