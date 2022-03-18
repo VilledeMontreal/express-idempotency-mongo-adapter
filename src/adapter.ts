@@ -9,6 +9,7 @@ import {
 import { boundClass } from 'autobind-decorator';
 import { AdapterOptions } from './adapterOptions';
 import { Collection, Db, MongoClient } from 'mongodb';
+import { DefaultDelegateBehavior } from './defaultDelegateBehavior';
 
 // Default values
 const COLLECTION_PREFIX = 'idempotency';
@@ -39,6 +40,7 @@ interface MongoIdempotencyResource extends IdempotencyResource {
  */
 @boundClass
 export class MongoAdapter implements IIdempotencyDataAdapter {
+    
     // Options used to configure the mongo adapter
     private _options: AdapterOptions;
 
@@ -46,9 +48,8 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
     // This is to prevent the schema creation phase to repeat itself.
     private _initialized = false;
 
-    // Database connection
-    private _mongoClient: MongoClient;
-    private _db: Db;
+    // Reference to the default delegate behavior is this option is used.
+    private _defaultDelegateBehavior: DefaultDelegateBehavior = null;
 
     /**
      * Constructor, basically keep a copy of options passed as arguments.
@@ -56,10 +57,15 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
      * @param options Provided options
      */
     public constructor(options: AdapterOptions) {
+        // Initialize default delegate behavior if required
+        if(!options?.useDelegation) {
+            this._defaultDelegateBehavior = new DefaultDelegateBehavior(options.config);
+        }
+
         this._options = {
             config: options.config,
             useDelegation: options.useDelegation,
-            delegate: options.delegate,
+            delegate: options.useDelegation ? options.delegate : this._defaultDelegateBehavior.delegate,
             collectionPrefix: options.collectionPrefix
                 ? options.collectionPrefix
                 : COLLECTION_PREFIX,
@@ -70,29 +76,8 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
     /**
      * Indicate if the adapter is ready for use.
      */
-    public isInitlialized(): boolean {
+    public isInitialized(): boolean {
         return this._initialized;
-    }
-
-    /**
-     * Establish the connection with the database
-     * by initializing the mongo client.
-     */
-    private async connectToDatabase(): Promise<void> {
-        this._initialized = true;
-
-        if (this._options.useDelegation) {
-            // Retrieve database connection from delegation
-            this._db = await this._options.delegate();
-        } else {
-            // Must establish connection itself
-            this._mongoClient = new MongoClient(
-                this._options.config.uri,
-                this._options.config.settings
-            );
-            await this._mongoClient.connect();
-            this._db = this._mongoClient.db();
-        }
     }
 
     /**
@@ -100,15 +85,24 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
      * It creates the collection and the appropriate indexes.
      */
     public async init(): Promise<void> {
-        // Do the connection to the database
-        await this.connectToDatabase();
+        // Initialize default delegate is required
+        if(this._defaultDelegateBehavior) {
+            const result = await this._defaultDelegateBehavior.init();
+            /*
+            if(!result) {
+                console.log('ERROR DUDE');
+                throw ('Failed to initialize connection to the database');
+            }
+            */
+        }
 
         // Setup store collection
         const storeCollection = await this.getOrCreateCollection(
             this.getStoreCollectionName()
         );
+
         // Create the idempotency key index if it doesn't exist
-        storeCollection.createIndexes([
+        await storeCollection.createIndexes([
             {
                 key: { idempotencyKey: 1 },
                 name: 'searchByKey',
@@ -132,14 +126,16 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
      * Used to stop the adapter by closing database connection.
      */
     public async stop(): Promise<boolean> {
-        if (this._mongoClient) {
-            try {
-                await this._mongoClient.close();
-                return true;
-            } catch (err) {
-                return false;
+        if(this._defaultDelegateBehavior) {
+            if(!await this._defaultDelegateBehavior.stop()) {
+                throw ('Failed to stop the adapter.');
             }
         }
+
+        // Indicate that the adapter has been initialized
+        this._initialized = false;
+
+        return true;
     }
 
     /**
@@ -149,13 +145,15 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
     private async getOrCreateCollection(
         collectionName: string
     ): Promise<Collection<any>> {
+        const db: Db = await this._options.delegate();
+
         let collection = null;
         try {
-            collection = await this._db.collection(collectionName);
+            collection = db.collection(collectionName);
         } catch (err) {
-            // if doesn't exist, create if
-            collection = await this._db.createCollection(collectionName);
+            collection = await db.createCollection(collectionName);
         }
+
         return collection;
     }
 
@@ -164,7 +162,7 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
      * and do the setup.
      */
     private async checkForInitialization(): Promise<void> {
-        if (!this.isInitlialized()) {
+        if (!this.isInitialized()) {
             throw new Error('Adapter has not been initialized.');
         }
     }
@@ -192,9 +190,10 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
         idempotencyKey: string
     ): Promise<IdempotencyResource | null> {
         await this.checkForInitialization();
+        const db: Db = await this._options.delegate();
 
         // Check if we can find the idempotency key in the store.
-        const collection = this._db.collection<MongoIdempotencyResource>(
+        const collection = db.collection<MongoIdempotencyResource>(
             this.getStoreCollectionName()
         );
 
@@ -223,8 +222,9 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
         idempotencyResource: IdempotencyResource
     ): Promise<void> {
         await this.checkForInitialization();
+        const db: Db = await this._options.delegate();
 
-        const collection = this._db.collection(this.getStoreCollectionName());
+        const collection = db.collection(this.getStoreCollectionName());
         await collection.insertOne({
             ...idempotencyResource,
             createdAt: new Date(),
@@ -240,13 +240,14 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
         idempotencyResource: IdempotencyResource
     ): Promise<void> {
         await this.checkForInitialization();
+        const db: Db = await this._options.delegate();
 
         const newResource = {
             ...idempotencyResource,
             createdAt: new Date(),
             schemaVersion: SCHEMA_VERSION,
         };
-        const collection = this._db.collection(this.getStoreCollectionName());
+        const collection = db.collection(this.getStoreCollectionName());
         await collection.replaceOne(
             { idempotencyKey: idempotencyResource.idempotencyKey },
             newResource
@@ -259,7 +260,8 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
      */
     public async delete(idempotencyKey: string): Promise<void> {
         await this.checkForInitialization();
-        const collection = this._db.collection(this.getStoreCollectionName());
+        const db: Db = await this._options.delegate();
+        const collection = db.collection(this.getStoreCollectionName());
         await collection.deleteOne({ idempotencyKey });
     }
 }

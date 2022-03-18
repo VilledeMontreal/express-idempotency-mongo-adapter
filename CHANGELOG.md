@@ -2,6 +2,10 @@
 
 All notable changes to this library will be documented in this file.
 
+## 1.0.4
+
+-   Delegation function is called when a connection to MongoDB is required instead of retaining the database reference ([issue #11](https://github.com/VilledeMontreal/express-idempotency-mongo-adapter/issues/11))
+
 ## 1.0.3
 
 -   Use express-idempotency 1.0.5 typescript definition
