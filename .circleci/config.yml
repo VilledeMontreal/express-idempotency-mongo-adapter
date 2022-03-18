@@ -6,7 +6,7 @@ defaults: &defaults
 
 version: 2.1
 orbs:
-    node: cimg/node@16.13
+    node: cimg/node@16.14.2
     coverage-reporter: codacy/coverage-reporter@10.0.3
 jobs:
     build:
