@@ -8,7 +8,7 @@ import {
 } from 'express-idempotency';
 import { boundClass } from 'autobind-decorator';
 import { AdapterOptions } from './adapterOptions';
-import { Collection, Db, MongoClient } from 'mongodb';
+import { Collection, Db } from 'mongodb';
 import { DefaultDelegateBehavior } from './defaultDelegateBehavior';
 
 // Default values
@@ -90,13 +90,7 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
     public async init(): Promise<void> {
         // Initialize default delegate is required
         if (this._defaultDelegateBehavior) {
-            const result = await this._defaultDelegateBehavior.init();
-            /*
-            if(!result) {
-                console.log('ERROR DUDE');
-                throw ('Failed to initialize connection to the database');
-            }
-            */
+            await this._defaultDelegateBehavior.init();
         }
 
         // Setup store collection
