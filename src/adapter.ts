@@ -40,7 +40,6 @@ interface MongoIdempotencyResource extends IdempotencyResource {
  */
 @boundClass
 export class MongoAdapter implements IIdempotencyDataAdapter {
-    
     // Options used to configure the mongo adapter
     private _options: AdapterOptions;
 
@@ -58,14 +57,18 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
      */
     public constructor(options: AdapterOptions) {
         // Initialize default delegate behavior if required
-        if(!options?.useDelegation) {
-            this._defaultDelegateBehavior = new DefaultDelegateBehavior(options.config);
+        if (!options?.useDelegation) {
+            this._defaultDelegateBehavior = new DefaultDelegateBehavior(
+                options.config
+            );
         }
 
         this._options = {
             config: options.config,
             useDelegation: options.useDelegation,
-            delegate: options.useDelegation ? options.delegate : this._defaultDelegateBehavior.delegate,
+            delegate: options.useDelegation
+                ? options.delegate
+                : this._defaultDelegateBehavior.delegate,
             collectionPrefix: options.collectionPrefix
                 ? options.collectionPrefix
                 : COLLECTION_PREFIX,
@@ -86,7 +89,7 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
      */
     public async init(): Promise<void> {
         // Initialize default delegate is required
-        if(this._defaultDelegateBehavior) {
+        if (this._defaultDelegateBehavior) {
             const result = await this._defaultDelegateBehavior.init();
             /*
             if(!result) {
@@ -126,9 +129,9 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
      * Used to stop the adapter by closing database connection.
      */
     public async stop(): Promise<boolean> {
-        if(this._defaultDelegateBehavior) {
-            if(!await this._defaultDelegateBehavior.stop()) {
-                throw ('Failed to stop the adapter.');
+        if (this._defaultDelegateBehavior) {
+            if (!(await this._defaultDelegateBehavior.stop())) {
+                throw 'Failed to stop the adapter.';
             }
         }
 

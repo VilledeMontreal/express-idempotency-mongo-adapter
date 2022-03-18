@@ -2,16 +2,14 @@ import { boundClass } from 'autobind-decorator';
 import { Db, MongoClient } from 'mongodb';
 import { MongoConnectionOptions } from './adapterOptions';
 
-
 /**
  * This class is used to provide a default delegation behavior to the
  * mongo data adapter. It is used if a delegate function is not provided
  * during the mongo data adapter configuration.
- * 
+ *
  */
 @boundClass
 export class DefaultDelegateBehavior {
-
     // Database connection
     private _mongoClient: MongoClient;
     private _db: Db;
@@ -41,7 +39,7 @@ export class DefaultDelegateBehavior {
     /**
      * Initialize the default delegate.
      * Basically, it connects to the database.
-     * @returns 
+     * @returns
      */
     public async init(): Promise<void> {
         await this.connectToDatabase();
@@ -50,16 +48,16 @@ export class DefaultDelegateBehavior {
     /**
      * The delegation for the data adapter to get access
      * to the database.
-     * @returns 
+     * @returns
      */
     public delegate(): Promise<Db> {
-        return new Promise(resolve => resolve(this._db));
+        return new Promise((resolve) => resolve(this._db));
     }
 
     /**
      * Used to stop the adapter by closing database connection.
      */
-     public async stop(): Promise<boolean> {
+    public async stop(): Promise<boolean> {
         if (this._mongoClient) {
             try {
                 await this._mongoClient.close();
@@ -69,5 +67,4 @@ export class DefaultDelegateBehavior {
             }
         }
     }
-
 }
