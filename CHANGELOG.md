@@ -5,6 +5,7 @@ All notable changes to this library will be documented in this file.
 ## 1.0.4
 
 -   Delegation function is called when a connection to MongoDB is required instead of retaining the database reference ([issue #11](https://github.com/VilledeMontreal/express-idempotency-mongo-adapter/issues/11))
+-   Add events for before and after database usage
 
 ## 1.0.3
 

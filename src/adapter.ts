@@ -73,6 +73,9 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
                 ? options.collectionPrefix
                 : COLLECTION_PREFIX,
             ttl: options.ttl ? options.ttl : TTL,
+            // Events
+            onBeforeDbUse: options.onBeforeDbUse,
+            onAfterDbUse: options.onAfterDbUse
         };
     }
 
@@ -219,6 +222,8 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
         idempotencyResource: IdempotencyResource
     ): Promise<void> {
         await this.checkForInitialization();
+
+        await this._options?.onBeforeDbUse?.call(this);
         const db: Db = await this._options.delegate();
 
         const collection = db.collection(this.getStoreCollectionName());
@@ -227,6 +232,7 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
             createdAt: new Date(),
             schemaVersion: SCHEMA_VERSION,
         });
+        await this._options?.onAfterDbUse?.call(this);
     }
 
     /**
@@ -237,6 +243,7 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
         idempotencyResource: IdempotencyResource
     ): Promise<void> {
         await this.checkForInitialization();
+        await this._options?.onBeforeDbUse?.call(this);
         const db: Db = await this._options.delegate();
 
         const newResource = {
@@ -249,6 +256,7 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
             { idempotencyKey: idempotencyResource.idempotencyKey },
             newResource
         );
+        await this._options?.onAfterDbUse?.call(this);
     }
 
     /**
@@ -257,9 +265,11 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
      */
     public async delete(idempotencyKey: string): Promise<void> {
         await this.checkForInitialization();
+        await this._options?.onBeforeDbUse?.call(this);
         const db: Db = await this._options.delegate();
         const collection = db.collection(this.getStoreCollectionName());
         await collection.deleteOne({ idempotencyKey });
+        await this._options?.onAfterDbUse?.call(this);
     }
 }
 

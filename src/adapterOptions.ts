@@ -29,6 +29,10 @@ export interface AdapterOptions {
     useDelegation?: boolean;
     delegate?: () => Promise<mongodb.Db>;
 
+    // Hooks for events
+    onBeforeDbUse?: () => Promise<void>;
+    onAfterDbUse?: () => Promise<void>;
+
     // The prefix used to create collections in the mongo database
     // Default value is 'idempotency'
     collectionPrefix?: string;
