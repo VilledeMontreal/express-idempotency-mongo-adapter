@@ -75,7 +75,7 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
             ttl: options.ttl ? options.ttl : TTL,
             // Events
             onBeforeDbUse: options.onBeforeDbUse,
-            onAfterDbUse: options.onAfterDbUse
+            onAfterDbUse: options.onAfterDbUse,
         };
     }
 
