@@ -64,7 +64,7 @@ jobs:
                   at: /home/circleci
             - run: 
                 name: "Extract release candidate version"
-                command: "RC_TAG=`echo ${CIRCLE_BRANCH} | cut -c 2-`"
+                command: "RC_TAG=`echo ${CIRCLE_TAG} | cut -c 2-`"
             - run:
                 name: "Change default version from package.json for Git tag"
                 command: "npm version ${RC_TAG}"
