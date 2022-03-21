@@ -63,11 +63,8 @@ jobs:
             - attach_workspace:
                   at: /home/circleci
             - run: 
-                name: "Extract release candidate version"
-                command: RC_TAG=`echo $CIRCLE_TAG | cut -c 2-` && echo "Extracted version $RC_TAG"
-            - run:
-                name: "Change default version from package.json for Git tag"
-                command: echo "Use version $RC_TAG as tag" && npm version -git-tag-version false $RC_TAG
+                name: "Extract release candidate version and update package.json"
+                command: RC_TAG=`echo $CIRCLE_TAG | cut -c 2-` && echo "Extracted version $RC_TAG" && npm version -git-tag-version false $RC_TAG
             - run: npm publish --tag rc --access public
 workflows:
     main-workflow:
