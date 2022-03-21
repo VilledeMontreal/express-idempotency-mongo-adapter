@@ -67,7 +67,7 @@ jobs:
                 command: "RC_TAG=`echo ${CIRCLE_TAG} | cut -c 2-`"
             - run:
                 name: "Change default version from package.json for Git tag"
-                command: "npm version ${RC_TAG}"
+                command: 'echo "Use version ${RC_TAG} as tag" && npm version -git-tag-version false ${RC_TAG}'
             - run: npm publish --tag rc --access public
 workflows:
     main-workflow:
