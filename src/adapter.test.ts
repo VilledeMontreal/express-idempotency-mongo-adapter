@@ -66,7 +66,8 @@ describe('IIdempotencyDataAdapter tests', () => {
         await dataAdapter.create(idempotencyResource);
 
         const newIdempotencyResource = createFakeIdempotencyResource();
-        newIdempotencyResource.idempotencyKey = idempotencyResource.idempotencyKey;
+        newIdempotencyResource.idempotencyKey =
+            idempotencyResource.idempotencyKey;
 
         try {
             await dataAdapter.create(newIdempotencyResource);
@@ -174,16 +175,18 @@ function createFakeIdempotencyRequest(): IdempotencyRequest {
         method: faker.helpers.arrayElement(['GET', 'POST', 'PUT', 'DELETE']),
         body: { data: faker.string.alphanumeric(10) },
         headers: { 'content-type': 'application/json' },
-        query: { q: faker.string.alphanumeric(5) }
+        query: { q: faker.string.alphanumeric(5) },
     };
 }
 
 function createFakeIdempotencyResponse(): IdempotencyResponse {
     const idempotencyResponse = new IdempotencyResponse();
-    idempotencyResponse.statusCode = faker.helpers.arrayElement([200, 201, 204]);
-    idempotencyResponse.body = { 
+    idempotencyResponse.statusCode = faker.helpers.arrayElement([
+        200, 201, 204,
+    ]);
+    idempotencyResponse.body = {
         id: faker.string.uuid(),
-        message: faker.lorem.sentence()
+        message: faker.lorem.sentence(),
     };
     return idempotencyResponse;
 }
@@ -196,7 +199,9 @@ function createFakeIdempotencyResource(): IdempotencyResource {
     return res;
 }
 
-function createArrayOfIndempotencyResource(count: number = 5): IdempotencyResource[] {
+function createArrayOfIndempotencyResource(
+    count: number = 5
+): IdempotencyResource[] {
     const idempotencyResources: IdempotencyResource[] = [];
     for (let i = 0; i < count; i++) {
         idempotencyResources.push(createFakeIdempotencyResource());
