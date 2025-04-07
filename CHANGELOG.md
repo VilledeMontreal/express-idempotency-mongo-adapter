@@ -20,7 +20,7 @@ All notable changes to this project will be documented in this file.
 
 ### Improved
 - Added more robust testing with proper object creation in test helpers
-- Updated Docker configurations to use Node.js 20 LTS and MongoDB 7.0
+- Updated Docker configurations to use Node.js 22 LTS and MongoDB 7.0
 - Enhanced TypeScript types and interfaces
 
 ## [1.0.3]
