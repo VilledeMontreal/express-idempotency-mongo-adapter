@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [1.0.4] - 2025-04-07
 
 ### Upgraded
-- Updated MongoDB driver from v4.x to v6.3.0 
+- Updated MongoDB driver from v4.x to v6.3.0
 - Upgraded TypeScript from v3.x to v5.5.2
 - Updated all testing libraries to latest versions
 - Replaced deprecated `faker` with `@faker-js/faker` v8.4.1

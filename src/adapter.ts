@@ -321,7 +321,6 @@ export function newAdapter(options: AdapterOptions): MongoAdapter {
             // Do nothing
         })
         .catch((err) => {
-            console.error('Failed to initialize MongoDB adapter:', err);
             throw err;
         }); // Launch initialization
     return adapter;
