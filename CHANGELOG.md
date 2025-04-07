@@ -9,12 +9,14 @@ All notable changes to this project will be documented in this file.
 - Upgraded TypeScript from v3.x to v5.5.2
 - Updated all testing libraries to latest versions
 - Replaced deprecated `faker` with `@faker-js/faker` v8.4.1
+- Modernized Husky configuration from legacy format to v9 directory-based structure
 
 ### Fixed
 - Updated MongoDB connection handling for v6 compatibility
 - Fixed ESLint configuration for compatibility with eslint-config-prettier v9
 - Enhanced error handling throughout the adapter with improved error messages
 - Added proper null checking for database connections
+- Fixed Git hooks execution issues with updated Husky configuration
 
 ### Improved
 - Added more robust testing with proper object creation in test helpers
