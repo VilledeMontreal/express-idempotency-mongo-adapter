@@ -1,4 +1,4 @@
-FROM node:16
+FROM node:22
 
 # Create app directory
 WORKDIR /usr/src/app
@@ -7,7 +7,7 @@ WORKDIR /usr/src/app
 COPY . .
 
 # Compile the library and link the library
-RUN rm -rf node_modules dist && npm install && npm run compile && npm prune --production && npm link
+RUN rm -rf node_modules dist && npm install && npm run compile && npm link
 
 # Installation of package to run the application
 WORKDIR /usr/src/app/examples/ttl

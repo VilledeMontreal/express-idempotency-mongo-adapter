@@ -26,7 +26,7 @@ const SCHEMA_VERSION = '1.0.0';
 interface MongoIdempotencyResource extends IdempotencyResource {
     // Indicate the schema version used to describe the idempotency resource.
     // Required to provide backward compatibility later.
-    schemaVersion: number;
+    schemaVersion: string;
 
     // The date and time the resource as been created. Used by the TTL mongo index
     // to clear the collection.
@@ -47,8 +47,8 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
     private _initialized = false;
 
     // Database connection
-    private _mongoClient: MongoClient;
-    private _db: Db;
+    private _mongoClient: MongoClient | null = null;
+    private _db: Db | null = null;
 
     /**
      * Constructor, basically keep a copy of options passed as arguments.
@@ -79,19 +79,31 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
      * by initializing the mongo client.
      */
     private async connectToDatabase(): Promise<void> {
-        this._initialized = true;
-
         if (this._options.useDelegation) {
             // Retrieve database connection from delegation
-            this._db = await this._options.delegate();
-        } else {
+            this._db = await this._options.delegate!();
+        } else if (this._options.config?.uri) {
             // Must establish connection itself
-            this._mongoClient = new MongoClient(
-                this._options.config.uri,
-                this._options.config.settings
-            );
-            await this._mongoClient.connect();
-            this._db = this._mongoClient.db();
+            try {
+                this._mongoClient = new MongoClient(
+                    this._options.config.uri,
+                    this._options.config.settings
+                );
+
+                // In MongoDB v6, connect() is non-blocking and doesn't throw
+                // We need to await the connection and handle potential errors
+                await this._mongoClient.connect();
+
+                this._db = this._mongoClient.db();
+            } catch (err) {
+                const error =
+                    err instanceof Error ? err : new Error(String(err));
+                throw new Error(
+                    `Failed to connect to MongoDB: ${error.message}`
+                );
+            }
+        } else {
+            throw new Error('No MongoDB connection configuration provided');
         }
     }
 
@@ -100,32 +112,44 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
      * It creates the collection and the appropriate indexes.
      */
     public async init(): Promise<void> {
-        // Do the connection to the database
-        await this.connectToDatabase();
+        try {
+            // Do the connection to the database
+            await this.connectToDatabase();
 
-        // Setup store collection
-        const storeCollection = await this.getOrCreateCollection(
-            this.getStoreCollectionName()
-        );
-        // Create the idempotency key index if it doesn't exist
-        storeCollection.createIndexes([
-            {
-                key: { idempotencyKey: 1 },
-                name: 'searchByKey',
-                unique: true,
-            },
-            {
-                key: { createdAt: 1 },
-                name: 'ttlKey',
-                expireAfterSeconds: this._options.ttl,
-            },
-        ]);
+            if (!this._db) {
+                throw new Error('Database connection not established');
+            }
 
-        // Setup schema collection
-        await this.getOrCreateCollection(this.getSchemaCollectionName());
+            // Setup store collection
+            const storeCollection = await this.getOrCreateCollection(
+                this.getStoreCollectionName()
+            );
 
-        // Indicate that the adapter has been initialized
-        this._initialized = true;
+            // Create the idempotency key index if it doesn't exist
+            await storeCollection.createIndexes([
+                {
+                    key: { idempotencyKey: 1 },
+                    name: 'searchByKey',
+                    unique: true,
+                },
+                {
+                    key: { createdAt: 1 },
+                    name: 'ttlKey',
+                    expireAfterSeconds: this._options.ttl,
+                },
+            ]);
+
+            // Setup schema collection
+            await this.getOrCreateCollection(this.getSchemaCollectionName());
+
+            // Indicate that the adapter has been initialized
+            this._initialized = true;
+        } catch (err) {
+            const error = err instanceof Error ? err : new Error(String(err));
+            throw new Error(
+                `Failed to initialize MongoDB adapter: ${error.message}`
+            );
+        }
     }
 
     /**
@@ -135,11 +159,13 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
         if (this._mongoClient) {
             try {
                 await this._mongoClient.close();
+                this._initialized = false;
                 return true;
             } catch (err) {
                 return false;
             }
         }
+        return true;
     }
 
     /**
@@ -149,12 +175,26 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
     private async getOrCreateCollection(
         collectionName: string
     ): Promise<Collection<any>> {
-        let collection = null;
+        if (!this._db) {
+            throw new Error('Database connection not established');
+        }
+
+        let collection: Collection | null = null;
         try {
-            collection = await this._db.collection(collectionName);
+            const collections = await this._db
+                .listCollections({ name: collectionName })
+                .toArray();
+            if (collections.length > 0) {
+                collection = this._db.collection(collectionName);
+            } else {
+                // if doesn't exist, create it
+                collection = await this._db.createCollection(collectionName);
+            }
         } catch (err) {
-            // if doesn't exist, create if
-            collection = await this._db.createCollection(collectionName);
+            const error = err instanceof Error ? err : new Error(String(err));
+            throw new Error(
+                `Failed to get or create collection: ${error.message}`
+            );
         }
         return collection;
     }
@@ -166,6 +206,10 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
     private async checkForInitialization(): Promise<void> {
         if (!this.isInitlialized()) {
             throw new Error('Adapter has not been initialized.');
+        }
+
+        if (!this._db) {
+            throw new Error('Database connection not established');
         }
     }
 
@@ -198,9 +242,10 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
             this.getStoreCollectionName()
         );
 
-        const result: MongoIdempotencyResource = await collection.findOne({
-            idempotencyKey,
-        });
+        const result: MongoIdempotencyResource | null =
+            await collection.findOne({
+                idempotencyKey,
+            });
 
         if (result) {
             const idempotencyResource: IdempotencyResource = {
@@ -277,6 +322,6 @@ export function newAdapter(options: AdapterOptions): MongoAdapter {
         })
         .catch((err) => {
             throw err;
-        }); // Launch initialiation
+        }); // Launch initialization
     return adapter;
 }

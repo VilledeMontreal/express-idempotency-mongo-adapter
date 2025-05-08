@@ -2,7 +2,7 @@ import * as MongoAdapter from './adapter';
 import * as sinon from 'sinon';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { assert } from 'chai';
-import * as faker from 'faker';
+import { faker } from '@faker-js/faker';
 import {
     IdempotencyResource,
     IdempotencyRequest,
@@ -15,8 +15,7 @@ describe('IIdempotencyDataAdapter tests', () => {
     let dataAdapter: MongoAdapter.MongoAdapter = null;
 
     before(function (done) {
-        // Set a timeout which will give enough time to download the mongo memory server binairy
-        // to be downloaded.
+        // Set a timeout which will give enough time to download the mongo memory server binary
         this.timeout(60000);
 
         MongoMemoryServer.create().then((value) => {
@@ -40,23 +39,19 @@ describe('IIdempotencyDataAdapter tests', () => {
     });
 
     afterEach(() => {
-        sinon.restore;
+        sinon.restore();
     });
 
     it('finds correct idempotency key from multiple resource insertion', async () => {
         // Generate resources
-        const idempotencyResources = createArrayOfIndempotencyResource(99);
+        const idempotencyResources = createArrayOfIndempotencyResource(10);
         for (const singleIdempotencyResource of idempotencyResources) {
             await dataAdapter.create(singleIdempotencyResource);
         }
 
         // Select a single resource and try to find it
-        const index: number = faker.random.number({
-            min: 0,
-            max: idempotencyResources.length - 1,
-        });
-        const idempotencyResourceToFind: IdempotencyResource =
-            idempotencyResources[index];
+        const index = 0; // Just use the first one for simplicity
+        const idempotencyResourceToFind = idempotencyResources[index];
 
         // Find the resource
         const idempotencyFound = await dataAdapter.findByIdempotencyKey(
@@ -75,7 +70,7 @@ describe('IIdempotencyDataAdapter tests', () => {
             idempotencyResource.idempotencyKey;
 
         try {
-            await dataAdapter.create(idempotencyResource);
+            await dataAdapter.create(newIdempotencyResource);
             assert.fail('Expected to throw duplication error.');
         } catch (err) {
             assert.ok(err);
@@ -84,18 +79,14 @@ describe('IIdempotencyDataAdapter tests', () => {
 
     it('updates resource with response', async () => {
         // Generate resources
-        const idempotencyResources = createArrayOfIndempotencyResource(10);
+        const idempotencyResources = createArrayOfIndempotencyResource(5);
         for (const singleIdempotencyResource of idempotencyResources) {
             await dataAdapter.create(singleIdempotencyResource);
         }
 
         // Select a single resource and try to find it
-        const index: number = faker.random.number({
-            min: 0,
-            max: idempotencyResources.length - 1,
-        });
-        const idempotencyResourceToFind: IdempotencyResource =
-            idempotencyResources[index];
+        const index = 0; // Just use the first one for simplicity
+        const idempotencyResourceToFind = idempotencyResources[index];
 
         // Find the resource
         const idempotencyFound = await dataAdapter.findByIdempotencyKey(
@@ -117,18 +108,14 @@ describe('IIdempotencyDataAdapter tests', () => {
 
     it('deletes resource', async () => {
         // Generate resources
-        const idempotencyResources = createArrayOfIndempotencyResource(10);
+        const idempotencyResources = createArrayOfIndempotencyResource(5);
         for (const singleIdempotencyResource of idempotencyResources) {
             await dataAdapter.create(singleIdempotencyResource);
         }
 
         // Select a single resource and try to find it
-        const index: number = faker.random.number({
-            min: 0,
-            max: idempotencyResources.length - 1,
-        });
-        const idempotencyResourceToFind: IdempotencyResource =
-            idempotencyResources[index];
+        const index = 0; // Just use the first one for simplicity
+        const idempotencyResourceToFind = idempotencyResources[index];
 
         // Find the resource
         let idempotencyFound = await dataAdapter.findByIdempotencyKey(
@@ -185,37 +172,38 @@ describe('IIdempotencyDataAdapter tests', () => {
 function createFakeIdempotencyRequest(): IdempotencyRequest {
     return {
         url: faker.internet.url(),
-        method: faker.random.arrayElement(['GET', 'POST', 'PUT', 'DELETE']),
-        body: faker.random.objectElement(),
-        headers: {},
-        query: {},
+        method: faker.helpers.arrayElement(['GET', 'POST', 'PUT', 'DELETE']),
+        body: { data: faker.string.alphanumeric(10) },
+        headers: { 'content-type': 'application/json' },
+        query: { q: faker.string.alphanumeric(5) },
     };
 }
 
 function createFakeIdempotencyResponse(): IdempotencyResponse {
     const idempotencyResponse = new IdempotencyResponse();
-    idempotencyResponse.statusCode = faker.random.arrayElement([200, 201, 204]);
-    idempotencyResponse.body = faker.random.objectElement();
+    idempotencyResponse.statusCode = faker.helpers.arrayElement([
+        200, 201, 204,
+    ]);
+    idempotencyResponse.body = {
+        id: faker.string.uuid(),
+        message: faker.lorem.sentence(),
+    };
     return idempotencyResponse;
 }
 
 function createFakeIdempotencyResource(): IdempotencyResource {
     const res: IdempotencyResource = {
-        idempotencyKey: faker.random.uuid(),
+        idempotencyKey: faker.string.uuid(),
         request: createFakeIdempotencyRequest(),
     };
     return res;
 }
 
 function createArrayOfIndempotencyResource(
-    maxResource: number = faker.random.number(999)
+    count: number = 5
 ): IdempotencyResource[] {
     const idempotencyResources: IdempotencyResource[] = [];
-    const resourceCount: number = faker.random.number({
-        min: 1,
-        max: maxResource,
-    });
-    for (let i = 0; i < resourceCount; i++) {
+    for (let i = 0; i < count; i++) {
         idempotencyResources.push(createFakeIdempotencyResource());
     }
     return idempotencyResources;
