@@ -249,7 +249,7 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
      * @param value createdAt provided by the middleware, if any
      */
     private normalizeCreatedAt(value?: Date | number | null): Date {
-        if (value === undefined || value === null) {
+        if (value == null) {
             return new Date();
         }
         const date = new Date(value);
@@ -343,7 +343,7 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
             request: resource.request,
             schemaVersion: SCHEMA_VERSION,
         };
-        if (resource.response !== undefined) {
+        if (resource.response != null) {
             updateFields.response = resource.response;
         }
 
