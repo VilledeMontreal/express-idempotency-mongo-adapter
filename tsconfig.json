@@ -29,6 +29,7 @@
     "noImplicitAny": false,
     /* Raise error on expressions and declarations with an implied 'any' type. */
     "strictNullChecks": false /* Enable strict null checks. */ ,
+    "skipLibCheck": true /* Skip type checking of declaration files. Required because the dependencies are unpinned (no lockfile) and @types/* — notably @types/node — resolve to versions newer than the project's TypeScript lib. See issue #17. */ ,
     // "strictFunctionTypes": true,           /* Enable strict checking of function types. */
     // "strictBindCallApply": true,           /* Enable strict 'bind', 'call', and 'apply' methods on functions. */
     // "strictPropertyInitialization": true,  /* Enable strict checking of property initialization in classes. */

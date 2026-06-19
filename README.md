@@ -106,6 +106,8 @@ To avoid name conflict while using collection, it is possible to provide a colle
 
 The data adapter will create TTL indexes to purge data from collection after a certain period of time. By default, the ttl is `1 day` but is configurable.
 
+The TTL countdown starts at the resource creation time (when the request begins), not when the response is persisted. The adapter persists and returns the `createdAt` timestamp stamped by the middleware: this is required by the [`express-idempotency`](https://github.com/VilledeMontreal/express-idempotency) v2.x `processingTimeout` lease, which lets a retry take over an orphaned "in progress" resource instead of waiting for the full TTL to expire.
+
 ## License
 
 The source code of this project is distributed under the [MIT License](LICENSE).
@@ -215,6 +217,8 @@ Afin d'éviter des collisions au niveau des noms de collection, il est possible 
 #### Time-to-live (TTL)
 
 L'adapteur de données créé des index de type TTL afin de purger les données après un certain temps. Par défaut, la valeur du ttl est `1 jour` mais elle est configurable.
+
+Le décompte du TTL démarre au moment de la création de la resource (au début de la requête), et non à la persistance de la réponse. L'adapteur conserve et retourne l'horodatage `createdAt` posé par le middleware : il est requis par le mécanisme de lease `processingTimeout` de [`express-idempotency`](https://github.com/VilledeMontreal/express-idempotency) v2.x, qui permet à une nouvelle tentative de reprendre une resource « in progress » orpheline au lieu d'attendre l'expiration complète du TTL.
 
 ## Contribuer
 

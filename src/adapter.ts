@@ -20,6 +20,18 @@ const TTL = 86400;
 const SCHEMA_VERSION = '1.0.0';
 
 /**
+ * The `createdAt` timestamp is part of the parent library `IdempotencyResource`
+ * interface in v2.x (the processing-timeout / lease mechanism), but it is not present
+ * in the published `.d.ts` of the installed version. It is declared locally so the
+ * adapter stays decoupled from whichever parent version is installed: the middleware
+ * stamps `createdAt` at create time (request start) and relies on the adapter to
+ * persist, preserve and return it. Accepts `Date | number` to match the parent contract.
+ */
+type IdempotencyResourceWithCreatedAt = IdempotencyResource & {
+    createdAt?: Date | number;
+};
+
+/**
  * Specific idempotency resource for the mongo adapter.
  * Used to keep more information on the resource.
  */
@@ -28,8 +40,10 @@ interface MongoIdempotencyResource extends IdempotencyResource {
     // Required to provide backward compatibility later.
     schemaVersion: string;
 
-    // The date and time the resource as been created. Used by the TTL mongo index
-    // to clear the collection.
+    // The date and time the resource has been created. Stamped by the middleware
+    // (request start time) and preserved by the adapter across updates. Always
+    // persisted as a BSON Date — required by the `ttlKey` TTL index — and drives the
+    // v2.x lease / takeover of orphaned in-progress resources.
     createdAt: Date;
 }
 
@@ -228,6 +242,21 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
     }
 
     /**
+     * Normalize a createdAt value received from the middleware into a BSON Date
+     * for persistence and the TTL index. Accepts Date or epoch number, and falls
+     * back to the current date when absent or invalid — backward compatible with
+     * middleware versions that do not stamp createdAt (v1.x / v2.0.0).
+     * @param value createdAt provided by the middleware, if any
+     */
+    private normalizeCreatedAt(value?: Date | number | null): Date {
+        if (value === undefined || value === null) {
+            return new Date();
+        }
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? new Date() : date;
+    }
+
+    /**
      * Find the resource for a specific idempotency key.
      * @param idempotencyKey Idempotency key
      * @returns Idempotency resource
@@ -248,12 +277,19 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
             });
 
         if (result) {
-            const idempotencyResource: IdempotencyResource = {
+            const idempotencyResource: IdempotencyResourceWithCreatedAt = {
                 idempotencyKey: result.idempotencyKey,
                 request: result.request,
             };
             if (result.response) {
                 idempotencyResource.response = result.response;
+            }
+            // Re-expose createdAt to the v2.x middleware (lease / takeover and the
+            // zombie-write guard canStillPersist). Returned as a Date; the
+            // middleware's parseCreatedAt() accepts it. `!= null` rather than a
+            // truthiness check so an epoch-0 timestamp would still be exposed.
+            if (result.createdAt != null) {
+                idempotencyResource.createdAt = result.createdAt;
             }
             return idempotencyResource;
         }
@@ -269,10 +305,17 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
     ): Promise<void> {
         await this.checkForInitialization();
 
+        const { createdAt, ...rest } =
+            idempotencyResource as IdempotencyResourceWithCreatedAt;
         const collection = this._db.collection(this.getStoreCollectionName());
         await collection.insertOne({
-            ...idempotencyResource,
-            createdAt: new Date(),
+            ...rest,
+            // Persist the createdAt stamped by the middleware (request start time)
+            // instead of overwriting it. createdAt is destructured out of the spread
+            // so the normalized BSON Date is independent of key order (the TTL index
+            // requires a Date). Fallback to new Date() when absent — this is what the
+            // v2.x processing-timeout lease relies on.
+            createdAt: this.normalizeCreatedAt(createdAt),
             schemaVersion: SCHEMA_VERSION,
         });
     }
@@ -286,15 +329,28 @@ export class MongoAdapter implements IIdempotencyDataAdapter {
     ): Promise<void> {
         await this.checkForInitialization();
 
-        const newResource = {
-            ...idempotencyResource,
-            createdAt: new Date(),
+        const resource =
+            idempotencyResource as IdempotencyResourceWithCreatedAt;
+
+        // Use updateOne/$set so createdAt is NEVER rewritten. The v2.x lease and the
+        // zombie-write guard (canStillPersist) compare the in-memory createdAt against
+        // the value re-read from the store, so the original timestamp must survive the
+        // response persistence. Only the defined fields are set; no upsert, which keeps
+        // the previous silent no-op behaviour when the key does not exist. Unlike the
+        // former replaceOne, a response-less update no longer erases an already-cached
+        // response — the middleware only ever updates to persist one, so this is safe.
+        const updateFields: Record<string, unknown> = {
+            request: resource.request,
             schemaVersion: SCHEMA_VERSION,
         };
+        if (resource.response !== undefined) {
+            updateFields.response = resource.response;
+        }
+
         const collection = this._db.collection(this.getStoreCollectionName());
-        await collection.replaceOne(
-            { idempotencyKey: idempotencyResource.idempotencyKey },
-            newResource
+        await collection.updateOne(
+            { idempotencyKey: resource.idempotencyKey },
+            { $set: updateFields }
         );
     }
 
