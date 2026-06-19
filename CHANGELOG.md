@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- `createdAt` is now persisted from the value stamped by the middleware at create time, preserved across `update()`, and returned by `findByIdempotencyKey()`. This restores the `express-idempotency` v2.x processing-timeout lease / takeover mechanism, which the adapter previously defeated by regenerating the timestamp on every write — orphaned "in progress" documents stayed blocked with `409` until the long TTL expired ([#16](https://github.com/VilledeMontreal/express-idempotency-mongo-adapter/issues/16)).
+
+### Changed
+- `update()` no longer resets `createdAt` (switched from `replaceOne` to `updateOne`/`$set`). The TTL countdown now starts from the resource creation time (request start) instead of the response-persistence time. Behavioural change only — not breaking for the public API.
+- Enabled `skipLibCheck` in `tsconfig.json` so the build tolerates unpinned `@types/*` (notably `@types/node`) resolving to versions newer than the project's TypeScript ([#17](https://github.com/VilledeMontreal/express-idempotency-mongo-adapter/issues/17)).
+- Moved CI (build, lint, test) to GitHub Actions, using a MongoDB service container instead of downloading a `mongodb-memory-server` binary. CircleCI is now limited to npm publishing on version tags. The test suite connects to `MONGO_URI` when set (CI) and falls back to `mongodb-memory-server` locally ([#17](https://github.com/VilledeMontreal/express-idempotency-mongo-adapter/issues/17)).
+
 ## [1.0.5] - 2025-05-14
 
 Copy of 1.0.4 
