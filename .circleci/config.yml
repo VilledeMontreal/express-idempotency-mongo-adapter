@@ -1,4 +1,10 @@
 # .circleci/config.yml
+#
+# CircleCI is now scoped to npm publishing ONLY. Build, lint and test run on GitHub
+# Actions (see .github/workflows/ci.yml). Publishing stays here because the npm token
+# is a CircleCI secret tied to a maintainer's personal npm account and cannot be moved
+# without an org admin. The publish flow runs only on version tags, so no CircleCI
+# check is posted on branches or pull requests. See issue #17.
 defaults: &defaults
     executor:
         name: node/default
@@ -7,12 +13,20 @@ defaults: &defaults
 version: 2.1
 orbs:
     node: circleci/node@1.1.6
-    coverage-reporter: codacy/coverage-reporter@10.0.3
 jobs:
     build:
         <<: *defaults
         steps:
-            - checkout
+            # Public repo: clone over HTTPS to bypass the CircleCI SSH deploy key,
+            # whose access was revoked ("Permission denied (publickey)"). This flow
+            # only runs on version tags (publishing), so the workaround is isolated
+            # to releases. A full clone fetches every ref, so the tagged commit can
+            # be checked out by SHA. See issue #17.
+            - run:
+                  name: Checkout over HTTPS
+                  command: |
+                      git clone "https://github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}.git" .
+                      git checkout -f "${CIRCLE_SHA1}"
             - node/with-cache:
                   steps:
                       - run: npm install
@@ -20,15 +34,6 @@ jobs:
                   root: /home/circleci
                   paths:
                       - project/*
-    test:
-        <<: *defaults
-        steps:
-            - attach_workspace:
-                  at: /home/circleci
-            - run: npm test
-            - coverage-reporter/send_report:
-                  coverage-reports: 'coverage/lcov.info'
-                  project-token: ${CODACY_PROJECT_TOKEN}
     package:
         <<: *defaults
         steps:
@@ -64,25 +69,17 @@ jobs:
                   at: /home/circleci
             - run: npm publish --tag rc --access public
 workflows:
-    main-workflow:
+    publish-on-tag:
         jobs:
             - build:
                   filters:
                       tags:
                           only: /^v\d+\.{1}\d+.{1}\d.*+/
                       branches:
-                          only: /.*/
-            - test:
-                  requires:
-                      - build
-                  filters:
-                      tags:
-                          only: /^v\d+\.{1}\d+.{1}\d.*+/
-                      branches:
-                          only: /.*/
+                          ignore: /.*/
             - package:
                   requires:
-                      - test
+                      - build
                   filters:
                       tags:
                           only: /^v\d+\.{1}\d+.{1}\d.*+/

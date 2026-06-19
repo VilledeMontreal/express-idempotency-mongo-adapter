@@ -18,19 +18,29 @@ type IdempotencyResourceWithCreatedAt = IdempotencyResource & {
 };
 
 describe('IIdempotencyDataAdapter tests', () => {
-    let mongod: MongoMemoryServer = null;
+    let mongod: MongoMemoryServer | null = null;
+    let mongoUri: string = null;
     let dataAdapter: MongoAdapter.MongoAdapter = null;
 
     before(function (done) {
-        // Set a timeout which will give enough time to download the mongo memory server binary
+        // Allow enough time to download the in-memory mongod binary on a cold cache.
         this.timeout(60000);
 
-        MongoMemoryServer.create().then((value) => {
-            mongod = value;
+        // In CI, MONGO_URI points to a real MongoDB (e.g. a GitHub Actions service
+        // container), so no mongod binary has to be downloaded. Locally, fall back to
+        // an in-memory server so contributors need no setup.
+        const resolveUri: Promise<string> = process.env.MONGO_URI
+            ? Promise.resolve(process.env.MONGO_URI)
+            : MongoMemoryServer.create().then((value) => {
+                  mongod = value;
+                  return value.getUri();
+              });
 
+        resolveUri.then((uri) => {
+            mongoUri = uri;
             dataAdapter = MongoAdapter.newAdapter({
                 config: {
-                    uri: mongod.getUri(),
+                    uri: mongoUri,
                 },
             });
 
@@ -39,10 +49,12 @@ describe('IIdempotencyDataAdapter tests', () => {
         });
     });
 
-    // Clean Mongo memory server after use
+    // Clean up after use (stop the in-memory server only when we started one).
     after(async () => {
         await dataAdapter.stop();
-        await mongod.stop();
+        if (mongod) {
+            await mongod.stop();
+        }
     });
 
     afterEach(() => {
@@ -300,7 +312,7 @@ describe('IIdempotencyDataAdapter tests', () => {
     it('returns error if not initialized before interacting', async () => {
         const newDataAdapter = new MongoAdapter.MongoAdapter({
             config: {
-                uri: await mongod.getUri(),
+                uri: mongoUri,
             },
         });
         try {
@@ -312,9 +324,7 @@ describe('IIdempotencyDataAdapter tests', () => {
     });
 
     it('allows database connection delegation', async () => {
-        const mongoClient = await new MongoClient(
-            await mongod.getUri()
-        ).connect();
+        const mongoClient = await new MongoClient(mongoUri).connect();
         const newDataAdapter = new MongoAdapter.MongoAdapter({
             useDelegation: true,
             delegate: async (): Promise<Db> => {

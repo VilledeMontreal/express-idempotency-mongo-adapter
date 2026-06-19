@@ -1,0 +1,58 @@
+name: CI
+
+# Build, lint and test on GitHub Actions. Uses the native actions/checkout (no SSH
+# deploy key) and a MongoDB service container instead of downloading a mongod binary
+# via mongodb-memory-server. npm publishing stays on CircleCI (see .circleci/config.yml
+# and issue #17).
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Point the test suite at the MongoDB service container. Without this variable
+      # the suite falls back to mongodb-memory-server (used for local development).
+      MONGO_URI: mongodb://localhost:27017/idempotency-test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Check formatting
+        run: npm run prettier
+
+      - name: Compile
+        run: npm run compile
+
+      - name: Test
+        run: npm test
