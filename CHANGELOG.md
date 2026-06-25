@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.0.6] - 2026-06-25
 
 ### Fixed
 - `createdAt` is now persisted from the value stamped by the middleware at create time, preserved across `update()`, and returned by `findByIdempotencyKey()`. This restores the `express-idempotency` v2.x processing-timeout lease / takeover mechanism, which the adapter previously defeated by regenerating the timestamp on every write — orphaned "in progress" documents stayed blocked with `409` until the long TTL expired ([#16](https://github.com/VilledeMontreal/express-idempotency-mongo-adapter/issues/16)).
