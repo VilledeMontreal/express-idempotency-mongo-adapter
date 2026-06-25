@@ -2,14 +2,15 @@ name: CI
 
 # Build, lint and test on GitHub Actions. Uses the native actions/checkout (no SSH
 # deploy key) and a MongoDB service container instead of downloading a mongod binary
-# via mongodb-memory-server. npm publishing stays on CircleCI (see .circleci/config.yml
-# and issue #17).
+# via mongodb-memory-server. npm publishing is handled by the separate release.yml
+# workflow, triggered on version tags and using OIDC trusted publishing (no token).
 
 on:
   push:
     branches:
       - '**'
   pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -36,11 +37,11 @@ jobs:
       MONGO_URI: mongodb://localhost:27017/idempotency-test
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Install dependencies
         run: npm install

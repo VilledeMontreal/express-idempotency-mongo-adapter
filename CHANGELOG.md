@@ -10,7 +10,8 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - `update()` no longer resets `createdAt` (switched from `replaceOne` to `updateOne`/`$set`). The TTL countdown now starts from the resource creation time (request start) instead of the response-persistence time. Behavioural change only — not breaking for the public API.
 - Enabled `skipLibCheck` in `tsconfig.json` so the build tolerates unpinned `@types/*` (notably `@types/node`) resolving to versions newer than the project's TypeScript ([#17](https://github.com/VilledeMontreal/express-idempotency-mongo-adapter/issues/17)).
-- Moved CI (build, lint, test) to GitHub Actions, using a MongoDB service container instead of downloading a `mongodb-memory-server` binary. CircleCI is now limited to npm publishing on version tags. The test suite connects to `MONGO_URI` when set (CI) and falls back to `mongodb-memory-server` locally ([#17](https://github.com/VilledeMontreal/express-idempotency-mongo-adapter/issues/17)).
+- Moved CI (build, lint, test) to GitHub Actions, using a MongoDB service container instead of downloading a `mongodb-memory-server` binary. The test suite connects to `MONGO_URI` when set (CI) and falls back to `mongodb-memory-server` locally ([#17](https://github.com/VilledeMontreal/express-idempotency-mongo-adapter/issues/17)).
+- npm publishing also moved to GitHub Actions (`.github/workflows/release.yml`, on version tags) using **OIDC trusted publishing** — no long-lived `NPM_TOKEN`. **CircleCI has been removed.** Pre-release tags (`vX.Y.Z-<suffix>`) publish under the `rc` dist-tag; releases publish a SLSA provenance attestation and create a GitHub Release from the CHANGELOG.
 
 ## [1.0.5] - 2025-05-14
 
