@@ -93,6 +93,7 @@ Tout passe par **GitHub Actions** (plus de CircleCI) :
 - **Release** (`.github/workflows/release.yml`) — déclenché sur tag `vX.Y.Z`, rejoue les tests (service MongoDB) puis publie sur npm via **OIDC trusted publishing** (aucun `NPM_TOKEN` ; npm ≥ 11.5.1 fourni par Node 24 échange le jeton OIDC de GHA, avec `--provenance`) et crée une **GitHub Release** (notes du CHANGELOG). `vX.Y.Z` → dist-tag `latest`, `vX.Y.Z-<suffixe>` → dist-tag `rc`. Le job `version` aligne `package.json` sur le tag (`npm version --allow-same-version`) et échoue si aucune section `## [X.Y.Z]` n'existe dans `CHANGELOG.md`. Le job `publish` tourne dans l'environnement GitHub **`npm-production`** (required reviewer → approbation manuelle). Actions épinglées au SHA.
 - **Prérequis publication** : le package doit être configuré en *trusted publisher* sur npmjs.com (repo `VilledeMontreal/express-idempotency-mongo-adapter` + workflow `release.yml`). Le `release.yml` doit exister sur le commit pointé par le tag.
 - **Branches** : `master` (production) et `develop`.
+- **Branch protection `master`** : un ruleset GitHub protège `master` — PR obligatoire (0 approbation requise), status check `build-test` (CI GitHub Actions) requis, pas de force-push ni de suppression de branche. Le rôle *Repository admin* peut contourner (bypass toujours actif, à réserver aux urgences). Les push directs sur `master` sont bloqués ; brancher depuis `master` et ouvrir une PR (CI verte requise).
 
 ## Documentation avancée
 
